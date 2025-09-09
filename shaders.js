@@ -20,7 +20,7 @@ export const fragmentShaderSource = `#version 300 es
     out vec4 outColor;
 
     const vec4 SHADOW_BRIGHTNESS    = vec4(0.35, 0.35, 0.45, 1.0);
-    const float SHADOW_INTENSITY    = 0.7;
+    const float SHADOW_INTENSITY    = 0.5;
     const int SHADOW_STEPS          = 350;
     const float SHADOW_STEP_SIZE    = 0.01;
     const float SHADOW_PENUMBRA     = 0.02;
@@ -118,8 +118,11 @@ export const fragmentShaderSource = `#version 300 es
         return normalize(vec3(hL - hR, 2.0 * pixel, hD - hU));
     }
 
-    float calculateShadow(vec3 startPosition, vec3 lightDirection) {
+    float calculateShadow(vec3 startPosition, vec3 lightDirection, out float outIntensity) {
         float inShadow = 0.0;
+        float intensity = 1.0;
+        float dist = 0.0;
+
         vec3 p = startPosition + lightDirection * SHADOW_STEP_SIZE * 5.0;
 
         for (int i = 0; i < SHADOW_STEPS; i++) {
@@ -130,15 +133,20 @@ export const fragmentShaderSource = `#version 300 es
             inShadow = max(inShadow, occlusion);
 
             if (heightAtPoint > p.y) {
-                float dist = p.y - heightAtPoint;
+                dist = p.y - heightAtPoint;
                 float dynamicStep = max(SHADOW_STEP_SIZE, dist * 0.05);
                 p += lightDirection * dynamicStep;
+            } else {
+                p += lightDirection * SHADOW_STEP_SIZE;
             }
 
             if (inShadow >= 1.0) {
                 break;
             }
         }
+        
+        intensity = inShadow * 0.5 * (1.0 - smoothstep(0.0, SHADOW_INTENSITY, abs(dist)));
+        outIntensity = intensity;
         return inShadow;
     }
     
@@ -161,8 +169,10 @@ export const fragmentShaderSource = `#version 300 es
             lightFactor = 1.0; 
         }
 
-        float shadowOcclusion = calculateShadow(worldPos, lightDirection);
-        float shadowFactor = 1.0 - shadowOcclusion * SHADOW_INTENSITY;
+        float shadowIntensity;
+        float shadowOcclusion = calculateShadow(worldPos, lightDirection, shadowIntensity);
+        
+        float shadowFactor = 1.0 - shadowOcclusion * shadowIntensity;
 
         return shadowFactor * lightFactor;
     }
