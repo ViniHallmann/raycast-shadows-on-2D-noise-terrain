@@ -1,0 +1,198 @@
+export const vertexShaderSource = `#version 300 es
+    in vec2 a_position;
+    out vec2 v_texCoord;
+
+    void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+        v_texCoord = a_position * 0.5 + 0.5;
+    }
+`;
+
+export const fragmentShaderSource = `#version 300 es
+    precision highp float;
+
+    uniform sampler2D u_noiseTexture;
+    uniform vec3 u_sunPosition;
+    uniform vec3 u_sunColor;
+    uniform float u_time;
+
+    in vec2 v_texCoord;
+    out vec4 outColor;
+
+    const vec4 SHADOW_BRIGHTNESS    = vec4(0.35, 0.35, 0.45, 1.0);
+    const float SHADOW_INTENSITY    = 0.7;
+    const int SHADOW_STEPS          = 350;
+    const float SHADOW_STEP_SIZE    = 0.01;
+    const float SHADOW_PENUMBRA     = 0.02;
+
+    const float TERRAIN_VARIATION = 0.015;
+
+    const float WATERLEVEL    = 0.1;
+    const float SANDLEVEL     = 0.15;
+    const float GRASSLEVEL    = 0.25;
+    const float FORESTLEVEL   = 0.5;
+    const float ROCKLEVEL     = 0.7;
+    const float SNOWLEVEL     = 0.8;
+
+    vec4 getCoastalWaterColor() { return vec4(0.1, 0.6, 0.9, 1.0); }
+    vec4 getDeepOceanColor()    { return vec4(0.0, 0.2, 0.4, 1.0); }
+
+    vec4 getSandColor(float variation) {
+        vec4 sand1 = vec4(0.95, 0.85, 0.65, 1.0); vec4 sand2 = vec4(0.9, 0.8, 0.55, 1.0);
+        vec4 sand3 = vec4(0.98, 0.9, 0.75, 1.0); vec4 sand4 = vec4(0.85, 0.75, 0.5, 1.0);
+        if (variation < 0.25) return mix(sand1, sand2, variation * 4.0);
+        else if (variation < 0.5) return mix(sand2, sand3, (variation - 0.25) * 4.0);
+        else if (variation < 0.75) return mix(sand3, sand4, (variation - 0.5) * 4.0);
+        else return mix(sand4, sand1, (variation - 0.75) * 4.0);
+    }
+    vec4 getGrassColor(float variation) {
+        vec4 grass1 = vec4(0.3, 0.8, 0.2, 1.0); vec4 grass2 = vec4(0.5, 0.85, 0.3, 1.0);
+        vec4 grass3 = vec4(0.25, 0.7, 0.15, 1.0); vec4 grass4 = vec4(0.4, 0.75, 0.35, 1.0);
+        if (variation < 0.25) return mix(grass1, grass2, variation * 4.0);
+        else if (variation < 0.5) return mix(grass2, grass3, (variation - 0.25) * 4.0);
+        else if (variation < 0.75) return mix(grass3, grass4, (variation - 0.5) * 4.0);
+        else return mix(grass4, grass1, (variation - 0.75) * 4.0);
+    }
+    vec4 getForestColor(float variation) {
+        vec4 forest1 = vec4(0.15, 0.6, 0.1, 1.0); vec4 forest2 = vec4(0.2, 0.5, 0.15, 1.0);
+        vec4 forest3 = vec4(0.1, 0.55, 0.05, 1.0); vec4 forest4 = vec4(0.25, 0.45, 0.2, 1.0);
+        if (variation < 0.25) return mix(forest1, forest2, variation * 4.0);
+        else if (variation < 0.5) return mix(forest2, forest3, (variation - 0.25) * 4.0);
+        else if (variation < 0.75) return mix(forest3, forest4, (variation - 0.5) * 4.0);
+        else return mix(forest4, forest1, (variation - 0.75) * 4.0);
+    }
+    vec4 getRockColor(float variation) {
+        vec4 rock1 = vec4(0.6, 0.6, 0.65, 1.0); vec4 rock2 = vec4(0.55, 0.5, 0.45, 1.0);
+        vec4 rock3 = vec4(0.7, 0.7, 0.7, 1.0); vec4 rock4 = vec4(0.45, 0.4, 0.4, 1.0);
+        if (variation < 0.25) return mix(rock1, rock2, variation * 4.0);
+        else if (variation < 0.5) return mix(rock2, rock3, (variation - 0.25) * 4.0);
+        else if (variation < 0.75) return mix(rock3, rock4, (variation - 0.5) * 4.0);
+        else return mix(rock4, rock1, (variation - 0.75) * 4.0);
+    }
+    vec4 getSnowColor(float variation) {
+        vec4 snow1 = vec4(0.98, 0.98, 1.0, 1.0); vec4 snow2 = vec4(0.95, 0.95, 0.98, 1.0);
+        vec4 snow3 = vec4(0.92, 0.94, 0.98, 1.0);
+        if (variation < 0.5) return mix(snow1, snow2, variation * 2.0);
+        else return mix(snow2, snow3, (variation - 0.5) * 2.0);
+    }
+    
+    float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123);
+    }
+
+    float hash2(vec2 p) {
+        return fract(sin(dot(p, vec2(41.123, 67.891))) * 23421.6789);
+    }
+
+    vec4 classifyTerrain(float height, vec2 worldPos) {
+        float variation1 = hash(worldPos * 50.0);
+        float variation2 = hash2(worldPos * 150.0);
+        float combinedVariation = fract(variation1 + variation2 * 0.5);
+        
+        if (height < WATERLEVEL) return getCoastalWaterColor();
+        
+        float randomFactor = (hash(gl_FragCoord.xy) * 2.0 - 1.0) * TERRAIN_VARIATION;
+        height += randomFactor;
+        
+        if (height < SANDLEVEL)   return getSandColor(combinedVariation);
+        if (height < GRASSLEVEL)  return getGrassColor(combinedVariation);
+        if (height < FORESTLEVEL) return getForestColor(combinedVariation);
+        if (height < ROCKLEVEL)   return getRockColor(combinedVariation);
+        return getSnowColor(combinedVariation);
+    }
+
+    vec3 getNormal(vec2 texCoord, float terrainHeight) {
+        if (terrainHeight < WATERLEVEL) {
+            float waveTime = u_time * 2.0;
+            float waveX = sin(texCoord.x * 10.0 + waveTime) * 0.02;
+            float waveY = cos(texCoord.y * 10.0 + waveTime * 0.7) * 0.02;
+            return normalize(vec3(waveX, 1.0, waveY));
+        }
+
+        float pixel = 1.0 / 512.0;
+        float hL = texture(u_noiseTexture, texCoord - vec2(pixel, 0.0)).r;
+        float hR = texture(u_noiseTexture, texCoord + vec2(pixel, 0.0)).r;
+        float hD = texture(u_noiseTexture, texCoord - vec2(0.0, pixel)).r;
+        float hU = texture(u_noiseTexture, texCoord + vec2(0.0, pixel)).r;
+        
+        return normalize(vec3(hL - hR, 2.0 * pixel, hD - hU));
+    }
+
+    float calculateShadow(vec3 startPosition, vec3 lightDirection) {
+        float inShadow = 0.0;
+        vec3 p = startPosition + lightDirection * SHADOW_STEP_SIZE * 5.0;
+
+        for (int i = 0; i < SHADOW_STEPS; i++) {
+            float heightAtPoint = texture(u_noiseTexture, p.xz).r;
+            heightAtPoint = max(heightAtPoint, WATERLEVEL);
+            
+            float occlusion = clamp(heightAtPoint - p.y, 0.0, SHADOW_PENUMBRA) / SHADOW_PENUMBRA;
+            inShadow = max(inShadow, occlusion);
+
+            if (heightAtPoint > p.y) {
+                float dist = p.y - heightAtPoint;
+                float dynamicStep = max(SHADOW_STEP_SIZE, dist * 0.05);
+                p += lightDirection * dynamicStep;
+            }
+
+            if (inShadow >= 1.0) {
+                break;
+            }
+        }
+        return inShadow;
+    }
+    
+    vec4 applyWaterEffects(vec4 waterBaseColor, float waterDepth) {
+        float transparencyFactor = 1.0 - smoothstep(0.0, 0.08, waterDepth);
+        vec4 finalWaterColor = mix(waterBaseColor, getSandColor(0.5), transparencyFactor * 0.5);
+
+        float foamFactor = 1.0 - smoothstep(0.0, 0.05, waterDepth);
+        foamFactor *= (sin(u_time * 5.0 + waterDepth * 500.0) + 1.0) / 2.0;
+        finalWaterColor.rgb += foamFactor / 8.0;
+
+        return finalWaterColor;
+    }
+
+    float calculateLighting(vec3 normal, vec3 worldPos, float terrainHeight) {
+        vec3 lightDirection = normalize(u_sunPosition - worldPos);
+
+        float lightFactor = clamp(dot(normal, lightDirection), 0.0, 1.0);
+        if (terrainHeight < WATERLEVEL) {
+            lightFactor = 1.0; 
+        }
+
+        float shadowOcclusion = calculateShadow(worldPos, lightDirection);
+        float shadowFactor = 1.0 - shadowOcclusion * SHADOW_INTENSITY;
+
+        return shadowFactor * lightFactor;
+    }
+
+    void main() {
+        float terrainHeight = texture(u_noiseTexture, v_texCoord).r;
+        vec3 normal = getNormal(v_texCoord, terrainHeight);
+        vec4 baseColor = classifyTerrain(terrainHeight, v_texCoord);
+
+        //SLOPE
+        if (terrainHeight > SANDLEVEL) {
+            float slope = 1.0 - normal.y;
+            float rockFactor = smoothstep(0.85, 1.0, slope);
+            float slopeVariation = hash(v_texCoord * 80.0);
+            vec4 slopeRockColor = getRockColor(slopeVariation);
+            baseColor = mix(baseColor, slopeRockColor, rockFactor);
+        }
+        
+        float waterDepth = max(0.0, WATERLEVEL - terrainHeight);
+        if (waterDepth > 0.0) {
+           baseColor = applyWaterEffects(baseColor, waterDepth);
+        }
+
+        vec3 worldPos = vec3(v_texCoord.x, max(terrainHeight, WATERLEVEL), v_texCoord.y);
+        float visibility = calculateLighting(normal, worldPos, terrainHeight);
+
+        vec4 colorWithAmbient = baseColor * vec4(u_sunColor, 1.0);
+        
+        vec4 finalColor = mix(baseColor * SHADOW_BRIGHTNESS, colorWithAmbient, visibility);
+
+        outColor = finalColor;
+    }
+`;

@@ -1,0 +1,40 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background-color: #62A1A4; 
+  overflow: hidden;
+  font-family: sans-serif;
+}
+
+canvas {
+  display: block;     
+  width: 100vw;       
+  height: 100vh;      
+}
+
+#controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.control-group label {
+  min-width: 80px;
+}
+
+.control-group span {
+  min-width: 30px;
+  text-align: right;
+  margin-left: 10px;
+}
