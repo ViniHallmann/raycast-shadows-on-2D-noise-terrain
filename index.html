@@ -11,6 +11,8 @@
   <canvas id="gl-canvas"></canvas>
 
   <div id="controls">
+    
+    <h4>Geral</h4>
     <div class="control-group">
       <label for="octaves">Octaves</label>
       <input type="range" id="octaves" min="1" max="10" value="4" step="1">
@@ -31,8 +33,130 @@
       <input type="range" id="lacunarity" min="1.0" max="4.0" value="2.0" step="0.1">
       <span id="lacunarity-value">2.0</span>
     </div>
+    <div class="control-group">
+      <label for="noise-zoom">Noise Zoom</label>
+      <input type="range" id="noise-zoom" min="1.0" max="10.0" value="5.0" step="0.1">
+      <span id="noise-zoom-value">5.0</span>
+    </div>
+    <div class="control-group"> 
+      <label for="gradient-curve">Gradient Curve</label>
+      <input type="range" id="gradient-curve" min="0.1" max="3.0" value="0.8" step="0.1">
+      <span id="gradient-curve-value">0.8</span>
+    </div>
+    <div class="control-group">
+      <label for="terrain-variation">Terrain Variation</label>
+      <input type="range" id="terrain-variation" min="0.0" max="0.1" value="0.015" step="0.001">
+      <span id="terrain-variation-value">0.015</span>
+    </div>
+
+    <h4>Pincel</h4>
+    <div class="control-group">
+      <label for="brush-size">Brush Size</label>
+      <input type="range" id="brush-size" min="1" max="100" value="50" step="1">
+      <span id="brush-size-value">50</span>
+    </div>
+    <div class="control-group">
+      <label for="brush-intensity">Brush Intensity</label>
+      <input type="range" id="brush-intensity" min="0.001" max="0.05" value="0.005" step="0.001">
+      <span id="brush-intensity-value">0.005</span>
+    </div>
+     <div class="control-group">
+      <label for="brush-randomness">Brush Randomness</label>
+      <input type="range" id="brush-randomness" min="0.0" max="1.0" value="0.5" step="0.05">
+      <span id="brush-randomness-value">0.5</span>
+    </div>
+
+    <h4>Níveis do Terreno</h4>
+    <div class="control-group">
+      <label for="water-level">Water Level</label>
+      <input type="range" id="water-level" min="0.0" max="1.0" value="0.1" step="0.01">
+      <span id="water-level-value">0.1</span>
+    </div>
+    <div class="control-group">
+      <label for="sand-level">Sand Level</label>
+      <input type="range" id="sand-level" min="0.0" max="1.0" value="0.18" step="0.01">
+      <span id="sand-level-value">0.18</span>
+    </div>
+    <div class="control-group">
+      <label for="grass-level">Grass Level</label>
+      <input type="range" id="grass-level" min="0.0" max="1.0" value="0.45" step="0.01">
+      <span id="grass-level-value">0.45</span>
+    </div>
+    <div class="control-group">
+      <label for="forest-level">Forest Level</label>
+      <input type="range" id="forest-level" min="0.0" max="1.0" value="0.6" step="0.01">
+      <span id="forest-level-value">0.6</span>
+    </div>
+    <div class="control-group">
+      <label for="rock-level">Rock Level</label>
+      <input type="range" id="rock-level" min="0.0" max="1.0" value="0.7" step="0.01">
+      <span id="rock-level-value">0.7</span>
+    </div>
+    <div class="control-group">
+      <label for="snow-level">Snow Level</label>
+      <input type="range" id="snow-level" min="0.0" max="1.0" value="0.9" step="0.01">
+      <span id="snow-level-value">0.9</span>
+    </div>
+    <div class="control-group">
+      <label for="slope-start">Slope Start</label>
+      <input type="range" id="slope-start" min="0.0" max="1.0" value="0.85" step="0.01">
+      <span id="slope-start-value">0.85</span>
+    </div>
+
+    <h4>Sombras</h4>
+    <div class="control-group">
+      <label for="shadow-intensity">Shadow Intensity</label>
+      <input type="range" id="shadow-intensity" min="0.0" max="2.0" value="0.5" step="0.05">
+      <span id="shadow-intensity-value">0.5</span>
+    </div>
+    <div class="control-group">
+      <label for="shadow-steps">Shadow Steps</label>
+      <input type="range" id="shadow-steps" min="10" max="500" value="350" step="10">
+      <span id="shadow-steps-value">350</span>
+    </div>
+    <div class="control-group">
+      <label for="shadow-penumbra">Shadow Penumbra</label>
+      <input type="range" id="shadow-penumbra" min="0.0" max="0.1" value="0.02" step="0.001">
+      <span id="shadow-penumbra-value">0.02</span>
+    </div>
+
+    <h4>Água</h4>
+     <div class="control-group">
+      <label for="wave-amplitude">Wave Amplitude</label>
+      <input type="range" id="wave-amplitude" min="0.0" max="0.01" value="0.002" step="0.0001">
+      <span id="wave-amplitude-value">0.002</span>
+    </div>
+    <div class="control-group">
+      <label for="wave-frequency">Wave Frequency</label>
+      <input type="range" id="wave-frequency" min="1.0" max="20.0" value="8.0" step="0.5">
+      <span id="wave-frequency-value">8.0</span>
+    </div>
+    <div class="control-group">
+      <label for="wave-speed">Wave Speed</label>
+      <input type="range" id="wave-speed" min="0.0" max="0.1" value="0.01" step="0.001">
+      <span id="wave-speed-value">0.01</span>
+    </div>
+
+    <h4>Iluminação</h4>
+    <div class="control-group">
+      <label for="sun-height">Sun Height</label>
+      <input type="range" id="sun-height" min="0.1" max="5.0" value="2.0" step="0.1">
+      <span id="sun-height-value">2.0</span>
+    </div>
+    <div class="control-group">
+      <label for="specular-power">Specular Power</label>
+      <input type="range" id="specular-power" min="1" max="256" value="32" step="1">
+      <span id="specular-power-value">32</span>
+    </div>
+    <div class="control-group">
+      <label for="specular-intensity">Specular Intensity</label>
+      <input type="range" id="specular-intensity" min="0.0" max="2.0" value="0.4" step="0.05">
+      <span id="specular-intensity-value">0.4</span>
+    </div>
+    
+
     <div class="infos">
-      <p>Botao esquerdo adiciona terreno, botao do meio do mouse tira terreno</p>
+      <p>Botão esquerdo adiciona terreno, botão do meio do mouse tira terreno.</p>
     </div>
   </div>
 
