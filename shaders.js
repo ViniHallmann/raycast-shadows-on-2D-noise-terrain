@@ -12,6 +12,7 @@ export const fragmentShaderSource = `#version 300 es
     precision highp float;
 
     uniform sampler2D u_noiseTexture;
+    uniform sampler2D u_waterTexture;
     uniform vec3 u_sunPosition;
     uniform vec3 u_sunColor;
     uniform float u_time;
@@ -25,17 +26,17 @@ export const fragmentShaderSource = `#version 300 es
     const float SHADOW_STEP_SIZE    = 0.01;
     const float SHADOW_PENUMBRA     = 0.02;
 
-    const float TERRAIN_VARIATION = 0.015;
+    uniform float u_terrainVariation;
 
     const float WATERLEVEL    = 0.1;
-    const float SANDLEVEL     = 0.15;
-    const float GRASSLEVEL    = 0.25;
-    const float FORESTLEVEL   = 0.5;
+    const float SANDLEVEL     = 0.18;
+    const float GRASSLEVEL    = 0.45;
+    const float FORESTLEVEL   = 0.6;
     const float ROCKLEVEL     = 0.7;
-    const float SNOWLEVEL     = 0.8;
+    const float SNOWLEVEL     = 0.9;
 
     vec4 getCoastalWaterColor() { return vec4(0.1, 0.6, 0.9, 1.0); }
-    vec4 getDeepOceanColor()    { return vec4(0.0, 0.2, 0.4, 1.0); }
+    vec4 getDeepOceanColor()    { return vec4(0.0, 0.43, 0.69, 1.0); }
 
     vec4 getSandColor(float variation) {
         vec4 sand1 = vec4(0.95, 0.85, 0.65, 1.0); vec4 sand2 = vec4(0.9, 0.8, 0.55, 1.0);
@@ -84,14 +85,16 @@ export const fragmentShaderSource = `#version 300 es
         return fract(sin(dot(p, vec2(41.123, 67.891))) * 23421.6789);
     }
 
+    float easeOut(float x, float factor) {
+        return clamp(1.0 - pow(1.0 - x, factor), 0.0, 1.0);
+    }
+
     vec4 classifyTerrain(float height, vec2 worldPos) {
         float variation1 = hash(worldPos * 50.0);
         float variation2 = hash2(worldPos * 150.0);
         float combinedVariation = fract(variation1 + variation2 * 0.5);
         
-        if (height < WATERLEVEL) return getCoastalWaterColor();
-        
-        float randomFactor = (hash(gl_FragCoord.xy) * 2.0 - 1.0) * TERRAIN_VARIATION;
+        float randomFactor = (hash(gl_FragCoord.xy) * 2.0 - 1.0) * u_terrainVariation;;
         height += randomFactor;
         
         if (height < SANDLEVEL)   return getSandColor(combinedVariation);
@@ -101,12 +104,31 @@ export const fragmentShaderSource = `#version 300 es
         return getSnowColor(combinedVariation);
     }
 
+    float getWaterNoise(vec2 position) {
+        return 0.002 * (texture(u_waterTexture, fract(position * 8.0)).r * 2.0 - 1.0);
+    }
+
+    float getWaterLevel(vec2 position) {
+        float t = u_time * 0.01;
+        
+        float waveHeight = getWaterNoise(position + t);
+        
+        float angle = 0.5;
+        mat2 rotationMatrix = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
+        waveHeight += getWaterNoise(position * rotationMatrix - vec2(t, 0.0));
+        
+        return WATERLEVEL + waveHeight;
+    }
+
     vec3 getNormal(vec2 texCoord, float terrainHeight) {
         if (terrainHeight < WATERLEVEL) {
-            float waveTime = u_time * 2.0;
-            float waveX = sin(texCoord.x * 10.0 + waveTime) * 0.02;
-            float waveY = cos(texCoord.y * 10.0 + waveTime * 0.7) * 0.02;
-            return normalize(vec3(waveX, 1.0, waveY));
+            float pixel = 0.001; 
+            float hL = getWaterLevel(texCoord - vec2(pixel, 0.0));
+            float hR = getWaterLevel(texCoord + vec2(pixel, 0.0));
+            float hD = getWaterLevel(texCoord - vec2(0.0, pixel));
+            float hU = getWaterLevel(texCoord + vec2(0.0, pixel));
+            
+            return normalize(vec3(hL - hR, pixel * 2.0, hD - hU));
         }
 
         float pixel = 1.0 / 512.0;
@@ -149,25 +171,11 @@ export const fragmentShaderSource = `#version 300 es
         outIntensity = intensity;
         return inShadow;
     }
-    
-    vec4 applyWaterEffects(vec4 waterBaseColor, float waterDepth) {
-        float transparencyFactor = 1.0 - smoothstep(0.0, 0.08, waterDepth);
-        vec4 finalWaterColor = mix(waterBaseColor, getSandColor(0.5), transparencyFactor * 0.5);
-
-        float foamFactor = 1.0 - smoothstep(0.0, 0.05, waterDepth);
-        foamFactor *= (sin(u_time * 5.0 + waterDepth * 500.0) + 1.0) / 2.0;
-        finalWaterColor.rgb += foamFactor / 8.0;
-
-        return finalWaterColor;
-    }
 
     float calculateLighting(vec3 normal, vec3 worldPos, float terrainHeight) {
         vec3 lightDirection = normalize(u_sunPosition - worldPos);
 
         float lightFactor = clamp(dot(normal, lightDirection), 0.0, 1.0);
-        if (terrainHeight < WATERLEVEL) {
-            lightFactor = 1.0; 
-        }
 
         float shadowIntensity;
         float shadowOcclusion = calculateShadow(worldPos, lightDirection, shadowIntensity);
@@ -177,12 +185,28 @@ export const fragmentShaderSource = `#version 300 es
         return shadowFactor * lightFactor;
     }
 
+    vec4 applyWaterEffects(vec4 terrainColor, float waterDepth, float waterHeight) {
+        float waterLerp = easeOut(waterDepth / waterHeight, 1.0);
+        
+        vec4 waterShallowColor = getCoastalWaterColor();
+        vec4 waterDeepColor = getDeepOceanColor();
+        vec4 waterColor = mix(waterShallowColor, waterDeepColor, easeOut(waterDepth / waterHeight, 2.0));
+
+        vec4 sceneColor = mix(terrainColor, waterColor, waterLerp);
+
+        float foamFactor = 1.0 - smoothstep(0.0, 0.05, waterDepth);
+        foamFactor *= (sin(u_time * 5.0 + waterDepth * 500.0) + 1.0) / 2.0;
+        
+        sceneColor.rgb += foamFactor / 4.0;
+
+        return sceneColor;
+    }
+
     void main() {
         float terrainHeight = texture(u_noiseTexture, v_texCoord).r;
         vec3 normal = getNormal(v_texCoord, terrainHeight);
         vec4 baseColor = classifyTerrain(terrainHeight, v_texCoord);
 
-        //SLOPE
         if (terrainHeight > SANDLEVEL) {
             float slope = 1.0 - normal.y;
             float rockFactor = smoothstep(0.85, 1.0, slope);
@@ -190,19 +214,32 @@ export const fragmentShaderSource = `#version 300 es
             vec4 slopeRockColor = getRockColor(slopeVariation);
             baseColor = mix(baseColor, slopeRockColor, rockFactor);
         }
-        
-        float waterDepth = max(0.0, WATERLEVEL - terrainHeight);
-        if (waterDepth > 0.0) {
-           baseColor = applyWaterEffects(baseColor, waterDepth);
-        }
 
-        vec3 worldPos = vec3(v_texCoord.x, max(terrainHeight, WATERLEVEL), v_texCoord.y);
+        float waterHeight = getWaterLevel(v_texCoord);
+        vec3 worldPos = vec3(v_texCoord.x, max(terrainHeight, waterHeight), v_texCoord.y);
         float visibility = calculateLighting(normal, worldPos, terrainHeight);
 
-        vec4 colorWithAmbient = baseColor * vec4(u_sunColor, 1.0);
+        float waterDepth = max(0.0, waterHeight - terrainHeight);
         
-        vec4 finalColor = mix(baseColor * SHADOW_BRIGHTNESS, colorWithAmbient, visibility);
+        vec4 color;
+        if (waterDepth > 0.0) {
+           color = applyWaterEffects(baseColor, waterDepth, waterHeight);
+        } else {
+           color = baseColor;
+        }
 
-        outColor = finalColor;
+        vec3 ambient = SHADOW_BRIGHTNESS.rgb * 0.8;
+        vec3 directional = u_sunColor * visibility;
+        vec3 light = ambient + directional;
+
+        if (waterDepth > 0.0) {
+            vec3 sunDir = normalize(u_sunPosition - worldPos);
+            vec3 viewDir = normalize(vec3(0.5, 0.5, 2.0) - worldPos);
+            vec3 halfwayDir = normalize(sunDir + viewDir);
+            float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+            light += u_sunColor * spec * 0.4;
+        }
+        
+        outColor = vec4(color.rgb * light, 1.0);
     }
 `;
