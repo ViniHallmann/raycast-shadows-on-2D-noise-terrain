@@ -29,6 +29,14 @@ async function main() {
         waveSpeed: 0.01,
         specularPower: 32.0,
         specularIntensity: 0.4,
+        biomeFreq1: 50.0,
+        biomeFreq2: 150.0,
+        shadowStepSize: 0.01,
+        shadowColor: [0.35, 0.35, 0.45],
+        waveAngle: 0.5,
+        foamSpeed: 5.0,
+        foamFrequency: 500,
+        foamIntensity: 0.25,
     };
 
     const noiseParams = {
@@ -88,6 +96,16 @@ async function main() {
         sunHeight:         { slider: document.getElementById('sun-height'), valueLabel: document.getElementById('sun-height-value') },
         specularPower:     { slider: document.getElementById('specular-power'), valueLabel: document.getElementById('specular-power-value') },
         specularIntensity: { slider: document.getElementById('specular-intensity'), valueLabel: document.getElementById('specular-intensity-value') },
+        biomeFreq1:        { slider: document.getElementById('biome-freq1'), valueLabel: document.getElementById('biome-freq1-value') },
+        biomeFreq2:        { slider: document.getElementById('biome-freq2'), valueLabel: document.getElementById('biome-freq2-value') },
+        shadowStepSize:     { slider: document.getElementById('shadow-step-size'), valueLabel: document.getElementById('shadow-step-size-value') },
+        shadowColorR:       { slider: document.getElementById('shadow-color-r'), valueLabel: document.getElementById('shadow-color-r-value') },
+        shadowColorG:       { slider: document.getElementById('shadow-color-g'), valueLabel: document.getElementById('shadow-color-g-value') },
+        shadowColorB:       { slider: document.getElementById('shadow-color-b'), valueLabel: document.getElementById('shadow-color-b-value') },
+        waveAngle:          { slider: document.getElementById('wave-angle'), valueLabel: document.getElementById('wave-angle-value') },
+        foamSpeed:          { slider: document.getElementById('foam-speed'), valueLabel: document.getElementById('foam-speed-value') },
+        foamFrequency:      { slider: document.getElementById('foam-frequency'), valueLabel: document.getElementById('foam-frequency-value') },
+        foamIntensity:      { slider: document.getElementById('foam-intensity'), valueLabel: document.getElementById('foam-intensity-value') },
     };
 
     function setupControlListener(controlName, paramsObject) {
@@ -100,7 +118,7 @@ async function main() {
                 valueLabel.textContent = value.toFixed(3);
             } else if (controlName === 'waveAmplitude') {
                 valueLabel.textContent = value.toFixed(4);
-            } else if (['brushSize', 'octaves', 'shadowSteps', 'specularPower'].includes(controlName)) {
+            } else if (['brushSize', 'octaves', 'shadowSteps', 'specularPower', 'biomeFreq1', 'biomeFreq2', 'foamFrequency'].includes(controlName)) {
                 valueLabel.textContent = value.toFixed(0);
             } else {
                 valueLabel.textContent = value.toFixed(2);
@@ -115,10 +133,14 @@ async function main() {
         setupControlListener(name, noiseParams);
     });
 
-    ['terrainVariation', 'shadowIntensity', 'shadowSteps', 'shadowPenumbra', 'waveAmplitude', 'waveFrequency', 'waveSpeed', 'specularPower', 'specularIntensity'].forEach(name => {
+    ['terrainVariation', 'shadowIntensity', 'shadowSteps', 'shadowPenumbra', 'shadowStepSize',
+    'waveAmplitude', 'waveFrequency', 'waveSpeed', 'waveAngle',
+    'specularPower', 'specularIntensity',
+    'biomeFreq1', 'biomeFreq2',
+    'foamSpeed', 'foamFrequency', 'foamIntensity'
+    ].forEach(name => {
         setupControlListener(name, shaderParams);
     });
-
     ['brushSize', 'brushIntensity'].forEach(name => {
         setupControlListener(name, brushParams);
     });
@@ -133,12 +155,6 @@ async function main() {
         controls.sunHeight.valueLabel.textContent = value.toFixed(2);
     });
 
-
-
-
-
-
-
     controlsContainer.addEventListener('mouseenter', () => {
         isMouseOverUI = true;
     });
@@ -146,7 +162,20 @@ async function main() {
         isMouseOverUI = false;
     });
     
-    
+    function updateShadowColor() {
+        shaderParams.shadowColor = [
+            parseFloat(controls.shadowColorR.slider.value),
+            parseFloat(controls.shadowColorG.slider.value),
+            parseFloat(controls.shadowColorB.slider.value)
+        ];
+        controls.shadowColorR.valueLabel.textContent = shaderParams.shadowColor[0].toFixed(2);
+        controls.shadowColorG.valueLabel.textContent = shaderParams.shadowColor[1].toFixed(2);
+        controls.shadowColorB.valueLabel.textContent = shaderParams.shadowColor[2].toFixed(2);
+    }
+
+    controls.shadowColorR.slider.addEventListener('input', updateShadowColor);
+    controls.shadowColorG.slider.addEventListener('input', updateShadowColor);
+    controls.shadowColorB.slider.addEventListener('input', updateShadowColor);
 
     function resizeCanvas() {
         const displayWidth  = canvas.clientWidth;

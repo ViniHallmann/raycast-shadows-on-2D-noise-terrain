@@ -53,6 +53,17 @@ export class Renderer {
         this.u_specularPowerLocation     = this.gl.getUniformLocation(this.program, "u_specularPower");
         this.u_specularIntensityLocation = this.gl.getUniformLocation(this.program, "u_specularIntensity");
 
+        this.u_biomeFreq1Location = this.gl.getUniformLocation(this.program, "u_biomeFreq1");
+        this.u_biomeFreq2Location = this.gl.getUniformLocation(this.program, "u_biomeFreq2");
+
+
+        this.u_shadowStepSizeLocation = this.gl.getUniformLocation(this.program, "u_shadowStepSize");
+        this.u_shadowColorLocation    = this.gl.getUniformLocation(this.program, "u_shadowColor");
+
+        this.u_waveAngleLocation     = this.gl.getUniformLocation(this.program, "u_waveAngle");
+        this.u_foamSpeedLocation     = this.gl.getUniformLocation(this.program, "u_foamSpeed");
+        this.u_foamFrequencyLocation = this.gl.getUniformLocation(this.program, "u_foamFrequency");
+        this.u_foamIntensityLocation = this.gl.getUniformLocation(this.program, "u_foamIntensity");
         
         const positions = [ -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1 ];
         this.positionBuffer = this.gl.createBuffer();
@@ -149,7 +160,18 @@ export class Renderer {
 
         this.gl.uniform1f(this.u_specularPowerLocation, shaderParams.specularPower);
         this.gl.uniform1f(this.u_specularIntensityLocation, shaderParams.specularIntensity);
+
+        this.gl.uniform1f(this.u_biomeFreq1Location, shaderParams.biomeFreq1);
+        this.gl.uniform1f(this.u_biomeFreq2Location, shaderParams.biomeFreq2);
         
+        this.gl.uniform1f(this.u_shadowStepSizeLocation, shaderParams.shadowStepSize);
+        this.gl.uniform3fv(this.u_shadowColorLocation, shaderParams.shadowColor);
+
+        this.gl.uniform1f(this.u_waveAngleLocation, shaderParams.waveAngle);
+        this.gl.uniform1f(this.u_foamSpeedLocation, shaderParams.foamSpeed);
+        this.gl.uniform1f(this.u_foamFrequencyLocation, shaderParams.foamFrequency);
+        this.gl.uniform1f(this.u_foamIntensityLocation, shaderParams.foamIntensity);
+
         this.gl.bindVertexArray(this.vao);
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
     }

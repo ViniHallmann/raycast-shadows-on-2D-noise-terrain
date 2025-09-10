@@ -17,18 +17,11 @@ export const fragmentShaderSource = `#version 300 es
     uniform vec3 u_sunColor;
     uniform float u_time;
 
-    in vec2 v_texCoord;
-    out vec4 outColor;
-
-    const vec4 SHADOW_BRIGHTNESS    = vec4(0.35, 0.35, 0.45, 1.0);
-    const float SHADOW_INTENSITY    = 0.5;
-    const int SHADOW_STEPS          = 350;
-    const float SHADOW_STEP_SIZE    = 0.01;
-    const float SHADOW_PENUMBRA     = 0.02;
-
     uniform float u_shadowIntensity;
     uniform int u_shadowSteps;
     uniform float u_shadowPenumbra;
+    uniform float u_shadowStepSize;
+    uniform vec3 u_shadowColor;
 
     uniform float u_terrainVariation;
 
@@ -46,6 +39,17 @@ export const fragmentShaderSource = `#version 300 es
 
     uniform float u_specularPower;
     uniform float u_specularIntensity;
+
+    uniform float u_biomeFreq1;
+    uniform float u_biomeFreq2;
+
+    uniform float u_waveAngle;
+    uniform float u_foamSpeed;
+    uniform float u_foamFrequency;
+    uniform float u_foamIntensity;
+
+    in vec2 v_texCoord;
+    out vec4 outColor;
 
     vec4 getCoastalWaterColor() { return vec4(0.1, 0.6, 0.9, 1.0); }
     vec4 getDeepOceanColor()    { return vec4(0.0, 0.43, 0.69, 1.0); }
@@ -102,8 +106,8 @@ export const fragmentShaderSource = `#version 300 es
     }
 
     vec4 classifyTerrain(float height, vec2 worldPos) {
-        float variation1 = hash(worldPos * 50.0);
-        float variation2 = hash2(worldPos * 150.0);
+        float variation1 = hash(worldPos * u_biomeFreq1);
+        float variation2 = hash2(worldPos * u_biomeFreq2);
         float combinedVariation = fract(variation1 + variation2 * 0.5);
         
         float randomFactor = (hash(gl_FragCoord.xy) * 2.0 - 1.0) * u_terrainVariation;;
@@ -125,7 +129,7 @@ export const fragmentShaderSource = `#version 300 es
         
         float waveHeight = getWaterNoise(position + t);
         
-        float angle = 0.5;
+        float angle = u_waveAngle;
         mat2 rotationMatrix = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
         waveHeight += getWaterNoise(position * rotationMatrix - vec2(t, 0.0));
         
@@ -157,7 +161,7 @@ export const fragmentShaderSource = `#version 300 es
         float intensity = 1.0;
         float dist = 0.0;
 
-        vec3 p = startPosition + lightDirection * SHADOW_STEP_SIZE * 5.0;
+        vec3 p = startPosition + lightDirection * u_shadowStepSize * 5.0;
 
         for (int i = 0; i <  u_shadowSteps; i++) {
             float heightAtPoint = texture(u_noiseTexture, p.xz).r;
@@ -168,10 +172,10 @@ export const fragmentShaderSource = `#version 300 es
 
             if (heightAtPoint > p.y) {
                 dist = p.y - heightAtPoint;
-                float dynamicStep = max(SHADOW_STEP_SIZE, dist * 0.05);
+                float dynamicStep = max(u_shadowStepSize, dist * 0.05);
                 p += lightDirection * dynamicStep;
             } else {
-                p += lightDirection * SHADOW_STEP_SIZE;
+                p += lightDirection * u_shadowStepSize;
             }
 
             if (inShadow >= 1.0) {
@@ -207,9 +211,9 @@ export const fragmentShaderSource = `#version 300 es
         vec4 sceneColor = mix(terrainColor, waterColor, waterLerp);
 
         float foamFactor = 1.0 - smoothstep(0.0, 0.05, waterDepth);
-        foamFactor *= (sin(u_time * 5.0 + waterDepth * 500.0) + 1.0) / 2.0;
+        foamFactor *= (sin(u_time * u_foamSpeed + waterDepth * u_foamFrequency) + 1.0) / 2.0;
         
-        sceneColor.rgb += foamFactor / 4.0;
+        sceneColor.rgb += foamFactor * u_foamIntensity;
 
         return sceneColor;
     }
@@ -240,7 +244,7 @@ export const fragmentShaderSource = `#version 300 es
            color = baseColor;
         }
 
-        vec3 ambient = SHADOW_BRIGHTNESS.rgb * 0.8;
+        vec3 ambient = u_shadowColor * 0.8;
         vec3 directional = u_sunColor * visibility;
         vec3 light = ambient + directional;
 
