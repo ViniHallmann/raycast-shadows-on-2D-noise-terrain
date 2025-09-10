@@ -28,6 +28,7 @@ export class Renderer {
 
         this.positionAttributeLocation  = this.gl.getAttribLocation(this.program, "a_position");
         this.u_noiseTextureLocation     = this.gl.getUniformLocation(this.program, "u_noiseTexture");
+        this.u_waterTextureLocation     = this.gl.getUniformLocation(this.program, "u_waterTexture");
         this.u_sunPositionLocation      = this.gl.getUniformLocation(this.program, "u_sunPosition");
         this.u_sunColorLocation         = this.gl.getUniformLocation(this.program, "u_sunColor");
         this.u_timeLocation             = this.gl.getUniformLocation(this.program, "u_time");
@@ -87,7 +88,7 @@ export class Renderer {
         });
     }
 
-    render(noiseData, sunPosition, sunColor, time) {
+    render(noiseData, waterTexture,sunPosition, sunColor, time) {
         this.gl.clearColor(0.44, 0.68, 0.73, 1.0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
@@ -98,6 +99,10 @@ export class Renderer {
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.noiseTexture);
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.R32F, 512, 512, 0, this.gl.RED, this.gl.FLOAT, noiseData);
         this.gl.uniform1i(this.u_noiseTextureLocation, 0);
+
+        this.gl.activeTexture(this.gl.TEXTURE1);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, waterTexture);
+        this.gl.uniform1i(this.u_waterTextureLocation, 1);
 
         this.gl.uniform3f(this.u_sunPositionLocation, sunPosition.x, sunPosition.y, sunPosition.z);
         this.gl.uniform3fv(this.u_sunColorLocation, sunColor);

@@ -28,6 +28,7 @@ async function main() {
     let terrainAction = 'add';
     let lastMousePosition = { x: 0, y: 0 };
     let isMouseOverUI = false;
+    let voronoiTexture = null;
 
     function regenerateNoise() {
         baseNoiseData = noiseGenerator.generate(noiseParams);
@@ -114,6 +115,36 @@ async function main() {
         if (isModifyingTerrain) { modifyIsland(sunPosition.x, sunPosition.z); }
     }
 
+    async function loadTexture(url) {
+        return new Promise((resolve) => {
+            const texture = renderer.gl.createTexture();
+            const image = new Image();
+            image.onload = () => {
+                renderer.gl.bindTexture(renderer.gl.TEXTURE_2D, texture);
+                renderer.gl.texImage2D(renderer.gl.TEXTURE_2D, 0, renderer.gl.RGBA, 
+                                       renderer.gl.RGBA, renderer.gl.UNSIGNED_BYTE, image);
+                renderer.gl.texParameteri(renderer.gl.TEXTURE_2D, renderer.gl.TEXTURE_WRAP_S, renderer.gl.REPEAT);
+                renderer.gl.texParameteri(renderer.gl.TEXTURE_2D, renderer.gl.TEXTURE_WRAP_T, renderer.gl.REPEAT);
+                renderer.gl.texParameteri(renderer.gl.TEXTURE_2D, renderer.gl.TEXTURE_MIN_FILTER, renderer.gl.LINEAR);
+                renderer.gl.texParameteri(renderer.gl.TEXTURE_2D, renderer.gl.TEXTURE_MAG_FILTER, renderer.gl.LINEAR);
+                renderer.gl.generateMipmap(renderer.gl.TEXTURE_2D);
+                resolve(texture);
+            };
+            image.src = url;
+        });
+    }
+    
+    try {
+        voronoiTexture = await loadTexture('voronoi.png');
+        console.log("Voronoi texture loaded successfully");
+    } catch (error) {
+        console.error("Failed to load voronoi texture:", error);
+        voronoiTexture = renderer.gl.createTexture();
+        renderer.gl.bindTexture(renderer.gl.TEXTURE_2D, voronoiTexture);
+        renderer.gl.texImage2D(renderer.gl.TEXTURE_2D, 0, renderer.gl.RGBA, 1, 1, 0, 
+                            renderer.gl.RGBA, renderer.gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+    }
+
     window.addEventListener('mousedown', (event) => {
         if (isMouseOverUI) {
             return;
@@ -151,7 +182,7 @@ async function main() {
             noiseData[i] = Math.max(0.0, Math.min(combinedHeight, 1.0));
         }
 
-        renderer.render(noiseData, sunPosition, sunColor, performance.now() / 1000);
+        renderer.render(noiseData, voronoiTexture, sunPosition, sunColor, performance.now() / 1000);
         requestAnimationFrame(animate);
     }
 
