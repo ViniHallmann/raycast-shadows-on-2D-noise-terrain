@@ -32,6 +32,27 @@ export class Renderer {
         this.u_sunPositionLocation      = this.gl.getUniformLocation(this.program, "u_sunPosition");
         this.u_sunColorLocation         = this.gl.getUniformLocation(this.program, "u_sunColor");
         this.u_timeLocation             = this.gl.getUniformLocation(this.program, "u_time");
+        this.u_terrainVariationLocation = this.gl.getUniformLocation(this.program, "u_terrainVariation");
+
+        this.u_waterLevelLocation  = this.gl.getUniformLocation(this.program, "u_waterLevel");
+        this.u_sandLevelLocation   = this.gl.getUniformLocation(this.program, "u_sandLevel");
+        this.u_grassLevelLocation  = this.gl.getUniformLocation(this.program, "u_grassLevel");
+        this.u_forestLevelLocation = this.gl.getUniformLocation(this.program, "u_forestLevel");
+        this.u_rockLevelLocation   = this.gl.getUniformLocation(this.program, "u_rockLevel");
+        this.u_snowLevelLocation   = this.gl.getUniformLocation(this.program, "u_snowLevel");
+        this.u_slopeStartLocation  = this.gl.getUniformLocation(this.program, "u_slopeStart");
+
+        this.u_shadowIntensityLocation = this.gl.getUniformLocation(this.program, "u_shadowIntensity");
+        this.u_shadowStepsLocation     = this.gl.getUniformLocation(this.program, "u_shadowSteps");
+        this.u_shadowPenumbraLocation  = this.gl.getUniformLocation(this.program, "u_shadowPenumbra");
+
+        this.u_waveAmplitudeLocation = this.gl.getUniformLocation(this.program, "u_waveAmplitude");
+        this.u_waveFrequencyLocation = this.gl.getUniformLocation(this.program, "u_waveFrequency");
+        this.u_waveSpeedLocation     = this.gl.getUniformLocation(this.program, "u_waveSpeed");
+
+        this.u_specularPowerLocation     = this.gl.getUniformLocation(this.program, "u_specularPower");
+        this.u_specularIntensityLocation = this.gl.getUniformLocation(this.program, "u_specularIntensity");
+
         
         const positions = [ -1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1 ];
         this.positionBuffer = this.gl.createBuffer();
@@ -88,7 +109,7 @@ export class Renderer {
         });
     }
 
-    render(noiseData, waterTexture,sunPosition, sunColor, time) {
+    render(noiseData, waterTexture, sunPosition, sunColor, time, shaderParams) {
         this.gl.clearColor(0.44, 0.68, 0.73, 1.0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
@@ -107,6 +128,27 @@ export class Renderer {
         this.gl.uniform3f(this.u_sunPositionLocation, sunPosition.x, sunPosition.y, sunPosition.z);
         this.gl.uniform3fv(this.u_sunColorLocation, sunColor);
         this.gl.uniform1f(this.u_timeLocation, time);
+
+        this.gl.uniform1f(this.u_terrainVariationLocation, shaderParams.terrainVariation);
+
+        this.gl.uniform1f(this.u_waterLevelLocation, shaderParams.waterLevel);
+        this.gl.uniform1f(this.u_sandLevelLocation, shaderParams.sandLevel);
+        this.gl.uniform1f(this.u_grassLevelLocation, shaderParams.grassLevel);
+        this.gl.uniform1f(this.u_forestLevelLocation, shaderParams.forestLevel);
+        this.gl.uniform1f(this.u_rockLevelLocation, shaderParams.rockLevel);
+        this.gl.uniform1f(this.u_snowLevelLocation, shaderParams.snowLevel);
+        this.gl.uniform1f(this.u_slopeStartLocation, shaderParams.slopeStart);
+
+        this.gl.uniform1f(this.u_shadowIntensityLocation, shaderParams.shadowIntensity);
+        this.gl.uniform1i(this.u_shadowStepsLocation, shaderParams.shadowSteps);
+        this.gl.uniform1f(this.u_shadowPenumbraLocation, shaderParams.shadowPenumbra);
+
+        this.gl.uniform1f(this.u_waveAmplitudeLocation, shaderParams.waveAmplitude);
+        this.gl.uniform1f(this.u_waveFrequencyLocation, shaderParams.waveFrequency);
+        this.gl.uniform1f(this.u_waveSpeedLocation, shaderParams.waveSpeed);
+
+        this.gl.uniform1f(this.u_specularPowerLocation, shaderParams.specularPower);
+        this.gl.uniform1f(this.u_specularIntensityLocation, shaderParams.specularIntensity);
         
         this.gl.bindVertexArray(this.vao);
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);

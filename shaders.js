@@ -26,14 +26,26 @@ export const fragmentShaderSource = `#version 300 es
     const float SHADOW_STEP_SIZE    = 0.01;
     const float SHADOW_PENUMBRA     = 0.02;
 
+    uniform float u_shadowIntensity;
+    uniform int u_shadowSteps;
+    uniform float u_shadowPenumbra;
+
     uniform float u_terrainVariation;
 
-    const float WATERLEVEL    = 0.1;
-    const float SANDLEVEL     = 0.18;
-    const float GRASSLEVEL    = 0.45;
-    const float FORESTLEVEL   = 0.6;
-    const float ROCKLEVEL     = 0.7;
-    const float SNOWLEVEL     = 0.9;
+    uniform float u_waterLevel;
+    uniform float u_sandLevel;
+    uniform float u_grassLevel;
+    uniform float u_forestLevel;
+    uniform float u_rockLevel;
+    uniform float u_snowLevel;
+    uniform float u_slopeStart;
+
+    uniform float u_waveAmplitude;
+    uniform float u_waveFrequency;
+    uniform float u_waveSpeed;
+
+    uniform float u_specularPower;
+    uniform float u_specularIntensity;
 
     vec4 getCoastalWaterColor() { return vec4(0.1, 0.6, 0.9, 1.0); }
     vec4 getDeepOceanColor()    { return vec4(0.0, 0.43, 0.69, 1.0); }
@@ -97,19 +109,19 @@ export const fragmentShaderSource = `#version 300 es
         float randomFactor = (hash(gl_FragCoord.xy) * 2.0 - 1.0) * u_terrainVariation;;
         height += randomFactor;
         
-        if (height < SANDLEVEL)   return getSandColor(combinedVariation);
-        if (height < GRASSLEVEL)  return getGrassColor(combinedVariation);
-        if (height < FORESTLEVEL) return getForestColor(combinedVariation);
-        if (height < ROCKLEVEL)   return getRockColor(combinedVariation);
+        if (height < u_sandLevel)   return getSandColor(combinedVariation);
+        if (height < u_grassLevel)  return getGrassColor(combinedVariation);
+        if (height < u_forestLevel) return getForestColor(combinedVariation);
+        if (height < u_rockLevel)   return getRockColor(combinedVariation);
         return getSnowColor(combinedVariation);
     }
 
     float getWaterNoise(vec2 position) {
-        return 0.002 * (texture(u_waterTexture, fract(position * 8.0)).r * 2.0 - 1.0);
+        return u_waveAmplitude * (texture(u_waterTexture, fract(position * u_waveFrequency)).r * 2.0 - 1.0);
     }
 
     float getWaterLevel(vec2 position) {
-        float t = u_time * 0.01;
+        float t = u_time * u_waveSpeed;
         
         float waveHeight = getWaterNoise(position + t);
         
@@ -117,11 +129,11 @@ export const fragmentShaderSource = `#version 300 es
         mat2 rotationMatrix = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
         waveHeight += getWaterNoise(position * rotationMatrix - vec2(t, 0.0));
         
-        return WATERLEVEL + waveHeight;
+        return u_waterLevel + waveHeight;
     }
 
     vec3 getNormal(vec2 texCoord, float terrainHeight) {
-        if (terrainHeight < WATERLEVEL) {
+        if (terrainHeight < u_waterLevel) {
             float pixel = 0.001; 
             float hL = getWaterLevel(texCoord - vec2(pixel, 0.0));
             float hR = getWaterLevel(texCoord + vec2(pixel, 0.0));
@@ -147,11 +159,11 @@ export const fragmentShaderSource = `#version 300 es
 
         vec3 p = startPosition + lightDirection * SHADOW_STEP_SIZE * 5.0;
 
-        for (int i = 0; i < SHADOW_STEPS; i++) {
+        for (int i = 0; i <  u_shadowSteps; i++) {
             float heightAtPoint = texture(u_noiseTexture, p.xz).r;
-            heightAtPoint = max(heightAtPoint, WATERLEVEL);
+            heightAtPoint = max(heightAtPoint, u_waterLevel);
             
-            float occlusion = clamp(heightAtPoint - p.y, 0.0, SHADOW_PENUMBRA) / SHADOW_PENUMBRA;
+            float occlusion = clamp(heightAtPoint - p.y, 0.0, u_shadowPenumbra) / u_shadowPenumbra;
             inShadow = max(inShadow, occlusion);
 
             if (heightAtPoint > p.y) {
@@ -167,7 +179,7 @@ export const fragmentShaderSource = `#version 300 es
             }
         }
         
-        intensity = inShadow * 0.5 * (1.0 - smoothstep(0.0, SHADOW_INTENSITY, abs(dist)));
+        intensity = inShadow * 0.5 * (1.0 - smoothstep(0.0, u_shadowIntensity, abs(dist)));
         outIntensity = intensity;
         return inShadow;
     }
@@ -207,9 +219,9 @@ export const fragmentShaderSource = `#version 300 es
         vec3 normal = getNormal(v_texCoord, terrainHeight);
         vec4 baseColor = classifyTerrain(terrainHeight, v_texCoord);
 
-        if (terrainHeight > SANDLEVEL) {
+        if (terrainHeight > u_sandLevel) {
             float slope = 1.0 - normal.y;
-            float rockFactor = smoothstep(0.85, 1.0, slope);
+            float rockFactor = smoothstep(u_slopeStart, 1.0, slope);
             float slopeVariation = hash(v_texCoord * 80.0);
             vec4 slopeRockColor = getRockColor(slopeVariation);
             baseColor = mix(baseColor, slopeRockColor, rockFactor);
@@ -236,8 +248,8 @@ export const fragmentShaderSource = `#version 300 es
             vec3 sunDir = normalize(u_sunPosition - worldPos);
             vec3 viewDir = normalize(vec3(0.5, 0.5, 2.0) - worldPos);
             vec3 halfwayDir = normalize(sunDir + viewDir);
-            float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
-            light += u_sunColor * spec * 0.4;
+            float spec = pow(max(dot(normal, halfwayDir), 0.0), u_specularPower);
+            light += u_sunColor * spec * u_specularIntensity;
         }
         
         outColor = vec4(color.rgb * light, 1.0);
