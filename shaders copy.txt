@@ -26,29 +26,17 @@ export const fragmentShaderSource = `#version 300 es
     const float SHADOW_STEP_SIZE    = 0.01;
     const float SHADOW_PENUMBRA     = 0.02;
 
-    uniform float u_shadowIntensity;
-    uniform int u_shadowSteps;
-    uniform float u_shadowPenumbra;
+    const float TERRAIN_VARIATION = 0.015;
 
-    uniform float u_terrainVariation;
-
-    uniform float u_waterLevel;
-    uniform float u_sandLevel;
-    uniform float u_grassLevel;
-    uniform float u_forestLevel;
-    uniform float u_rockLevel;
-    uniform float u_snowLevel;
-    uniform float u_slopeStart;
-
-    uniform float u_waveAmplitude;
-    uniform float u_waveFrequency;
-    uniform float u_waveSpeed;
-
-    uniform float u_specularPower;
-    uniform float u_specularIntensity;
+    const float WATERLEVEL    = 0.1;
+    const float SANDLEVEL     = 0.25;
+    const float GRASSLEVEL    = 0.45;
+    const float FORESTLEVEL   = 0.6;
+    const float ROCKLEVEL     = 0.7;
+    const float SNOWLEVEL     = 0.9;
 
     vec4 getCoastalWaterColor() { return vec4(0.1, 0.6, 0.9, 1.0); }
-    vec4 getDeepOceanColor()    { return vec4(0.0, 0.43, 0.69, 1.0); }
+    vec4 getDeepOceanColor()    { return vec4(0.0, 0.2, 0.4, 1.0); }
 
     vec4 getSandColor(float variation) {
         vec4 sand1 = vec4(0.95, 0.85, 0.65, 1.0); vec4 sand2 = vec4(0.9, 0.8, 0.55, 1.0);
@@ -106,22 +94,24 @@ export const fragmentShaderSource = `#version 300 es
         float variation2 = hash2(worldPos * 150.0);
         float combinedVariation = fract(variation1 + variation2 * 0.5);
         
-        float randomFactor = (hash(gl_FragCoord.xy) * 2.0 - 1.0) * u_terrainVariation;;
+        if (height < WATERLEVEL) return getCoastalWaterColor();
+        
+        float randomFactor = (hash(gl_FragCoord.xy) * 2.0 - 1.0) * TERRAIN_VARIATION;
         height += randomFactor;
         
-        if (height < u_sandLevel)   return getSandColor(combinedVariation);
-        if (height < u_grassLevel)  return getGrassColor(combinedVariation);
-        if (height < u_forestLevel) return getForestColor(combinedVariation);
-        if (height < u_rockLevel)   return getRockColor(combinedVariation);
+        if (height < SANDLEVEL)   return getSandColor(combinedVariation);
+        if (height < GRASSLEVEL)  return getGrassColor(combinedVariation);
+        if (height < FORESTLEVEL) return getForestColor(combinedVariation);
+        if (height < ROCKLEVEL)   return getRockColor(combinedVariation);
         return getSnowColor(combinedVariation);
     }
 
     float getWaterNoise(vec2 position) {
-        return u_waveAmplitude * (texture(u_waterTexture, fract(position * u_waveFrequency)).r * 2.0 - 1.0);
+        return 0.002 * (texture(u_waterTexture, fract(position * 8.0)).r * 2.0 - 1.0);
     }
 
     float getWaterLevel(vec2 position) {
-        float t = u_time * u_waveSpeed;
+        float t = u_time * 0.01;
         
         float waveHeight = getWaterNoise(position + t);
         
@@ -129,11 +119,11 @@ export const fragmentShaderSource = `#version 300 es
         mat2 rotationMatrix = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
         waveHeight += getWaterNoise(position * rotationMatrix - vec2(t, 0.0));
         
-        return u_waterLevel + waveHeight;
+        return WATERLEVEL + waveHeight;
     }
 
     vec3 getNormal(vec2 texCoord, float terrainHeight) {
-        if (terrainHeight < u_waterLevel) {
+        if (terrainHeight < WATERLEVEL) {
             float pixel = 0.001; 
             float hL = getWaterLevel(texCoord - vec2(pixel, 0.0));
             float hR = getWaterLevel(texCoord + vec2(pixel, 0.0));
@@ -159,11 +149,11 @@ export const fragmentShaderSource = `#version 300 es
 
         vec3 p = startPosition + lightDirection * SHADOW_STEP_SIZE * 5.0;
 
-        for (int i = 0; i <  u_shadowSteps; i++) {
+        for (int i = 0; i < SHADOW_STEPS; i++) {
             float heightAtPoint = texture(u_noiseTexture, p.xz).r;
-            heightAtPoint = max(heightAtPoint, u_waterLevel);
+            heightAtPoint = max(heightAtPoint, WATERLEVEL);
             
-            float occlusion = clamp(heightAtPoint - p.y, 0.0, u_shadowPenumbra) / u_shadowPenumbra;
+            float occlusion = clamp(heightAtPoint - p.y, 0.0, SHADOW_PENUMBRA) / SHADOW_PENUMBRA;
             inShadow = max(inShadow, occlusion);
 
             if (heightAtPoint > p.y) {
@@ -179,7 +169,7 @@ export const fragmentShaderSource = `#version 300 es
             }
         }
         
-        intensity = inShadow * 0.5 * (1.0 - smoothstep(0.0, u_shadowIntensity, abs(dist)));
+        intensity = inShadow * 0.5 * (1.0 - smoothstep(0.0, SHADOW_INTENSITY, abs(dist)));
         outIntensity = intensity;
         return inShadow;
     }
@@ -188,6 +178,9 @@ export const fragmentShaderSource = `#version 300 es
         vec3 lightDirection = normalize(u_sunPosition - worldPos);
 
         float lightFactor = clamp(dot(normal, lightDirection), 0.0, 1.0);
+        // if (terrainHeight < WATERLEVEL) {
+        //     lightFactor = 1.0; 
+        // }
 
         float shadowIntensity;
         float shadowOcclusion = calculateShadow(worldPos, lightDirection, shadowIntensity);
@@ -197,21 +190,16 @@ export const fragmentShaderSource = `#version 300 es
         return shadowFactor * lightFactor;
     }
 
-    vec4 applyWaterEffects(vec4 terrainColor, float waterDepth, float waterHeight) {
-        float waterLerp = easeOut(waterDepth / waterHeight, 1.0);
-        
-        vec4 waterShallowColor = getCoastalWaterColor();
-        vec4 waterDeepColor = getDeepOceanColor();
-        vec4 waterColor = mix(waterShallowColor, waterDeepColor, easeOut(waterDepth / waterHeight, 2.0));
 
-        vec4 sceneColor = mix(terrainColor, waterColor, waterLerp);
+    vec4 applyWaterEffects(vec4 waterBaseColor, float waterDepth) {
+        float transparencyFactor = 1.0 - smoothstep(0.0, 0.08, waterDepth);
+        vec4 finalWaterColor = mix(waterBaseColor, getSandColor(0.5), transparencyFactor * 0.7);
 
         float foamFactor = 1.0 - smoothstep(0.0, 0.05, waterDepth);
         foamFactor *= (sin(u_time * 5.0 + waterDepth * 500.0) + 1.0) / 2.0;
-        
-        sceneColor.rgb += foamFactor / 4.0;
+        finalWaterColor.rgb += foamFactor / 4.0;
 
-        return sceneColor;
+        return finalWaterColor;
     }
 
     void main() {
@@ -219,39 +207,27 @@ export const fragmentShaderSource = `#version 300 es
         vec3 normal = getNormal(v_texCoord, terrainHeight);
         vec4 baseColor = classifyTerrain(terrainHeight, v_texCoord);
 
-        if (terrainHeight > u_sandLevel) {
+        //SLOPE
+        if (terrainHeight > SANDLEVEL) {
             float slope = 1.0 - normal.y;
-            float rockFactor = smoothstep(u_slopeStart, 1.0, slope);
+            float rockFactor = smoothstep(0.85, 1.0, slope);
             float slopeVariation = hash(v_texCoord * 80.0);
             vec4 slopeRockColor = getRockColor(slopeVariation);
             baseColor = mix(baseColor, slopeRockColor, rockFactor);
         }
 
-        float waterHeight = getWaterLevel(v_texCoord);
-        vec3 worldPos = vec3(v_texCoord.x, max(terrainHeight, waterHeight), v_texCoord.y);
+        float waterDepth = max(0.0, getWaterLevel(v_texCoord) - terrainHeight);
+        if (waterDepth > 0.0) {
+           baseColor = applyWaterEffects(baseColor, waterDepth);
+        }
+
+        vec3 worldPos = vec3(v_texCoord.x, max(terrainHeight, getWaterLevel(v_texCoord)), v_texCoord.y);
         float visibility = calculateLighting(normal, worldPos, terrainHeight);
 
-        float waterDepth = max(0.0, waterHeight - terrainHeight);
+        vec4 colorWithAmbient = baseColor * vec4(u_sunColor, 1.0);
         
-        vec4 color;
-        if (waterDepth > 0.0) {
-           color = applyWaterEffects(baseColor, waterDepth, waterHeight);
-        } else {
-           color = baseColor;
-        }
+        vec4 finalColor = mix(baseColor * SHADOW_BRIGHTNESS, colorWithAmbient, visibility);
 
-        vec3 ambient = SHADOW_BRIGHTNESS.rgb * 0.8;
-        vec3 directional = u_sunColor * visibility;
-        vec3 light = ambient + directional;
-
-        if (waterDepth > 0.0) {
-            vec3 sunDir = normalize(u_sunPosition - worldPos);
-            vec3 viewDir = normalize(vec3(0.5, 0.5, 2.0) - worldPos);
-            vec3 halfwayDir = normalize(sunDir + viewDir);
-            float spec = pow(max(dot(normal, halfwayDir), 0.0), u_specularPower);
-            light += u_sunColor * spec * u_specularIntensity;
-        }
-        
-        outColor = vec4(color.rgb * light, 1.0);
+        outColor = finalColor;
     }
 `;
