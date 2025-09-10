@@ -26,7 +26,7 @@ export class NoiseGenerator {
                     const nx = (x / this.width) * frequency;
                     const ny = (y / this.height) * frequency;
 
-                    total += this.noise2D(nx * 5, ny * 5) * amplitude;
+                    total += this.noise2D(nx * params.noiseZoom, ny * params.noiseZoom) * amplitude;
                     
                     maxValue += amplitude;
                     amplitude *= persistence;
@@ -45,7 +45,7 @@ export class NoiseGenerator {
 
                 const gradient = 1.0 - normalizedDistance;
 
-                value = Math.pow(value, 0.8); 
+                value = Math.pow(value, params.gradientCurve);
                 value = value - (1.0 - gradient);
 
                 data[y * this.width + x] = value;
