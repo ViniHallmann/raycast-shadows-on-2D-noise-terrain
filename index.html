@@ -43,11 +43,6 @@
       <input type="range" id="gradient-curve" min="0.1" max="3.0" value="0.8" step="0.1">
       <span id="gradient-curve-value">0.8</span>
     </div>
-    <div class="control-group">
-      <label for="terrain-variation">Terrain Variation</label>
-      <input type="range" id="terrain-variation" min="0.0" max="0.1" value="0.015" step="0.001">
-      <span id="terrain-variation-value">0.015</span>
-    </div>
 
     <h4>Pincel</h4>
     <div class="control-group">
@@ -98,6 +93,23 @@
       <span id="slope-start-value">0.85</span>
     </div>
 
+    <h4>Terreno</h4>
+    <div class="control-group">
+      <label for="terrain-variation">Terrain Variation</label>
+      <input type="range" id="terrain-variation" min="0.0" max="0.1" value="0.015" step="0.001">
+      <span id="terrain-variation-value">0.015</span>
+    </div>
+     <div class="control-group">
+      <label for="biome-freq1">Biome Freq. 1</label>
+      <input type="range" id="biome-freq1" min="1" max="200" value="50" step="1">
+      <span id="biome-freq1-value">50</span>
+    </div>
+    <div class="control-group">
+      <label for="biome-freq2">Biome Freq. 2</label>
+      <input type="range" id="biome-freq2" min="1" max="200" value="150" step="1">
+      <span id="biome-freq2-value">150</span>
+    </div>
+
     <h4>Sombras</h4>
     <div class="control-group">
       <label for="shadow-intensity">Shadow Intensity</label>
@@ -110,9 +122,29 @@
       <span id="shadow-steps-value">225</span>
     </div>
     <div class="control-group">
+      <label for="shadow-step-size">Shadow Step Size</label>
+      <input type="range" id="shadow-step-size" min="0.001" max="0.05" value="0.01" step="0.001">
+      <span id="shadow-step-size-value">0.01</span>
+    </div>
+    <div class="control-group">
       <label for="shadow-penumbra">Shadow Penumbra</label>
       <input type="range" id="shadow-penumbra" min="0.0" max="0.1" value="0.02" step="0.001">
       <span id="shadow-penumbra-value">0.02</span>
+    </div>
+    <div class="control-group">
+      <label for="shadow-color-r">Shadow Color R</label>
+      <input type="range" id="shadow-color-r" min="0.0" max="1.0" value="0.35" step="0.01">
+      <span id="shadow-color-r-value">0.35</span>
+    </div>
+    <div class="control-group">
+      <label for="shadow-color-g">Shadow Color G</label>
+      <input type="range" id="shadow-color-g" min="0.0" max="1.0" value="0.35" step="0.01">
+      <span id="shadow-color-g-value">0.35</span>
+    </div>
+    <div class="control-group">
+      <label for="shadow-color-b">Shadow Color B</label>
+      <input type="range" id="shadow-color-b" min="0.0" max="1.0" value="0.45" step="0.01">
+      <span id="shadow-color-b-value">0.45</span>
     </div>
 
     <h4>Água</h4>
@@ -130,6 +162,27 @@
       <label for="wave-speed">Wave Speed</label>
       <input type="range" id="wave-speed" min="0.0" max="0.1" value="0.01" step="0.001">
       <span id="wave-speed-value">0.01</span>
+    </div>
+     <div class="control-group">
+      <label for="wave-angle">Wave Angle</label>
+      <input type="range" id="wave-angle" min="0.0" max="6.28" value="0.5" step="0.01">
+      <span id="wave-angle-value">0.5</span>
+    </div>
+    <h5>Espuma</h5>
+    <div class="control-group">
+      <label for="foam-speed">Foam Speed</label>
+      <input type="range" id="foam-speed" min="0.0" max="20.0" value="5.0" step="0.5">
+      <span id="foam-speed-value">5.0</span>
+    </div>
+    <div class="control-group">
+      <label for="foam-frequency">Foam Frequency</label>
+      <input type="range" id="foam-frequency" min="100" max="1000" value="500" step="10">
+      <span id="foam-frequency-value">500</span>
+    </div>
+    <div class="control-group">
+      <label for="foam-intensity">Foam Intensity</label>
+      <input type="range" id="foam-intensity" min="0.0" max="1.0" value="0.25" step="0.01">
+      <span id="foam-intensity-value">0.25</span>
     </div>
 
     <h4>Iluminação</h4>
