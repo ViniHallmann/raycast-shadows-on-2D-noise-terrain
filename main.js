@@ -11,13 +11,41 @@ async function main() {
     const renderer = new Renderer(canvas);
     
     const noiseGenerator = new NoiseGenerator(512, 512);
-    
+
+    const shaderParams = {
+        terrainVariation: 0.015,
+        waterLevel: 0.1,
+        sandLevel: 0.18,
+        grassLevel: 0.45,
+        forestLevel: 0.6,
+        rockLevel: 0.7,
+        snowLevel: 0.9,
+        slopeStart: 0.85,
+        shadowIntensity: 0.5,
+        shadowSteps: 225,
+        shadowPenumbra: 0.02,
+        waveAmplitude: 0.002,
+        waveFrequency: 8.0,
+        waveSpeed: 0.01,
+        specularPower: 32.0,
+        specularIntensity: 0.4,
+    };
+
     const noiseParams = {
         octaves: 4,
         scale: 1.6,
         persistence: 0.5,
         lacunarity: 2.0,
+        noiseZoom: 5.0,
+        gradientCurve: 0.8,
     };
+
+    const brushParams = {
+        brushSize: 50,
+        brushIntensity: 0.005,
+    };
+
+    
     let baseNoiseData = noiseGenerator.generate(noiseParams);
     let modificationMap = new Float32Array(512 * 512).fill(0);
     let noiseData = new Float32Array(512 * 512);
@@ -35,28 +63,89 @@ async function main() {
     }
 
     const controls = {
-        octaves:     { slider: document.getElementById('octaves'), valueLabel: document.getElementById('octaves-value') },
-        scale:       { slider: document.getElementById('scale'), valueLabel: document.getElementById('scale-value') },
-        persistence: { slider: document.getElementById('persistence'), valueLabel: document.getElementById('persistence-value') },
-        lacunarity:  { slider: document.getElementById('lacunarity'), valueLabel: document.getElementById('lacunarity-value') },
+        octaves:          { slider: document.getElementById('octaves'), valueLabel: document.getElementById('octaves-value') },
+        scale:            { slider: document.getElementById('scale'), valueLabel: document.getElementById('scale-value') },
+        persistence:      { slider: document.getElementById('persistence'), valueLabel: document.getElementById('persistence-value') },
+        lacunarity:       { slider: document.getElementById('lacunarity'), valueLabel: document.getElementById('lacunarity-value') },
+        noiseZoom:        { slider: document.getElementById('noise-zoom'), valueLabel: document.getElementById('noise-zoom-value') },
+        gradientCurve:    { slider: document.getElementById('gradient-curve'), valueLabel: document.getElementById('gradient-curve-value') },
+        terrainVariation: { slider: document.getElementById('terrain-variation'), valueLabel: document.getElementById('terrain-variation-value') },
+        waterLevel:       { slider: document.getElementById('water-level'), valueLabel: document.getElementById('water-level-value') },
+        sandLevel:        { slider: document.getElementById('sand-level'), valueLabel: document.getElementById('sand-level-value') },
+        grassLevel:       { slider: document.getElementById('grass-level'), valueLabel: document.getElementById('grass-level-value') },
+        forestLevel:      { slider: document.getElementById('forest-level'), valueLabel: document.getElementById('forest-level-value') },
+        rockLevel:        { slider: document.getElementById('rock-level'), valueLabel: document.getElementById('rock-level-value') },
+        snowLevel:        { slider: document.getElementById('snow-level'), valueLabel: document.getElementById('snow-level-value') },
+        slopeStart:       { slider: document.getElementById('slope-start'), valueLabel: document.getElementById('slope-start-value') },
+        brushSize:        { slider: document.getElementById('brush-size'), valueLabel: document.getElementById('brush-size-value') },
+        brushIntensity:   { slider: document.getElementById('brush-intensity'), valueLabel: document.getElementById('brush-intensity-value') },
+        shadowIntensity:  { slider: document.getElementById('shadow-intensity'), valueLabel: document.getElementById('shadow-intensity-value') },
+        shadowSteps:      { slider: document.getElementById('shadow-steps'), valueLabel: document.getElementById('shadow-steps-value') },
+        shadowPenumbra:   { slider: document.getElementById('shadow-penumbra'), valueLabel: document.getElementById('shadow-penumbra-value') },
+        waveAmplitude:    { slider: document.getElementById('wave-amplitude'), valueLabel: document.getElementById('wave-amplitude-value') },
+        waveFrequency:    { slider: document.getElementById('wave-frequency'), valueLabel: document.getElementById('wave-frequency-value') },
+        waveSpeed:        { slider: document.getElementById('wave-speed'), valueLabel: document.getElementById('wave-speed-value') },
+        sunHeight:         { slider: document.getElementById('sun-height'), valueLabel: document.getElementById('sun-height-value') },
+        specularPower:     { slider: document.getElementById('specular-power'), valueLabel: document.getElementById('specular-power-value') },
+        specularIntensity: { slider: document.getElementById('specular-intensity'), valueLabel: document.getElementById('specular-intensity-value') },
     };
 
-    function setupControlListener(controlName) {
+    function setupControlListener(controlName, paramsObject) {
         const { slider, valueLabel } = controls[controlName];
         slider.addEventListener('input', (event) => {
             const value = parseFloat(event.target.value);
-            noiseParams[controlName] = value;
-            valueLabel.textContent = value.toFixed(2);
-            regenerateNoise();
+            paramsObject[controlName] = value;
+
+            if (controlName === 'brushIntensity' || controlName === 'terrainVariation' || controlName === 'shadowPenumbra' || controlName === 'waveSpeed') {
+                valueLabel.textContent = value.toFixed(3);
+            } else if (controlName === 'waveAmplitude') {
+                valueLabel.textContent = value.toFixed(4);
+            } else if (['brushSize', 'octaves', 'shadowSteps', 'specularPower'].includes(controlName)) {
+                valueLabel.textContent = value.toFixed(0);
+            } else {
+                valueLabel.textContent = value.toFixed(2);
+            }
+
+            if (paramsObject === noiseParams) {
+                regenerateNoise();
+            }
         });
     }
-    Object.keys(controls).forEach(setupControlListener);
+    ['octaves', 'scale', 'persistence', 'lacunarity', 'noiseZoom', 'gradientCurve'].forEach(name => {
+        setupControlListener(name, noiseParams);
+    });
+
+    ['terrainVariation', 'shadowIntensity', 'shadowSteps', 'shadowPenumbra', 'waveAmplitude', 'waveFrequency', 'waveSpeed', 'specularPower', 'specularIntensity'].forEach(name => {
+        setupControlListener(name, shaderParams);
+    });
+
+    ['brushSize', 'brushIntensity'].forEach(name => {
+        setupControlListener(name, brushParams);
+    });
+
+    ['waterLevel', 'sandLevel', 'grassLevel', 'forestLevel', 'rockLevel', 'snowLevel', 'slopeStart'].forEach(name => {
+        setupControlListener(name, shaderParams);
+    });
+
+    controls.sunHeight.slider.addEventListener('input', (event) => {
+        const value = parseFloat(event.target.value);
+        sunPosition.y = value;
+        controls.sunHeight.valueLabel.textContent = value.toFixed(2);
+    });
+
+
+
+
+
+
+
     controlsContainer.addEventListener('mouseenter', () => {
         isMouseOverUI = true;
     });
     controlsContainer.addEventListener('mouseleave', () => {
         isMouseOverUI = false;
     });
+    
     
 
     function resizeCanvas() {
@@ -77,9 +166,8 @@ async function main() {
         const textureX = Math.floor(normalizedX * 512);
         const textureY = Math.floor(normalizedY * 512);
 
-        const brushSize = 50;
-        const intensity = 0.005;
-        noiseGenerator.modifyTerrain(modificationMap, textureX, textureY, brushSize, intensity, terrainAction);
+        noiseGenerator.modifyTerrain(modificationMap, textureX, textureY, brushParams.brushSize, brushParams.brushIntensity, terrainAction);
+
     }
     
     function handleMousePosition(event) {
@@ -135,14 +223,13 @@ async function main() {
     }
     
     try {
-        voronoiTexture = await loadTexture('voronoi.png');
+        voronoiTexture = await loadTexture('voronoi2.png');
         console.log("Voronoi texture loaded successfully");
     } catch (error) {
         console.error("Failed to load voronoi texture:", error);
         voronoiTexture = renderer.gl.createTexture();
         renderer.gl.bindTexture(renderer.gl.TEXTURE_2D, voronoiTexture);
-        renderer.gl.texImage2D(renderer.gl.TEXTURE_2D, 0, renderer.gl.RGBA, 1, 1, 0, 
-                            renderer.gl.RGBA, renderer.gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+        renderer.gl.texImage2D(renderer.gl.TEXTURE_2D, 0, renderer.gl.RGBA, 1, 1, 0, renderer.gl.RGBA, renderer.gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
     }
 
     window.addEventListener('mousedown', (event) => {
@@ -182,7 +269,7 @@ async function main() {
             noiseData[i] = Math.max(0.0, Math.min(combinedHeight, 1.0));
         }
 
-        renderer.render(noiseData, voronoiTexture, sunPosition, sunColor, performance.now() / 1000);
+        renderer.render(noiseData, voronoiTexture, sunPosition, sunColor, performance.now() / 1000, shaderParams);
         requestAnimationFrame(animate);
     }
 
