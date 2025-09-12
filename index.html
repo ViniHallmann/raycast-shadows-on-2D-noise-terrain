@@ -10,27 +10,21 @@
 
   <canvas id="gl-canvas"></canvas>
 
-  <!-- Toggle Button -->
   <button id="controls-toggle" class="controls-toggle" aria-label="Toggle Controls">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
     </svg>
   </button>
 
-  <!-- Controls Panel -->
   <div id="controls" class="controls-panel">
     <div class="controls-header">
       <div class="header-left">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="settings-icon">
-          <path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="1.2" fill="none"/>
-          <path d="M14 8a6 6 0 11-12 0 6 6 0 0112 0z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="settings-icon">
+          <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
-        <span>Controles de Terreno</span>
+        <span>Controles de variáveis</span>
       </div>
       <div class="header-right">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" class="chevron">
-          <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
         <button id="controls-close" class="controls-close" aria-label="Close Controls">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M9 3L3 9M3 3l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -260,17 +254,33 @@
 
     controlsToggle.addEventListener('click', () => {
       controlsPanel.classList.add('controls-visible');
+      controlsToggle.style.display = 'none';
     });
 
     controlsClose.addEventListener('click', () => {
       controlsPanel.classList.remove('controls-visible');
+      controlsToggle.style.display = 'flex';
     });
 
-    // Close on outside click
     document.addEventListener('click', (e) => {
-      if (!controlsPanel.contains(e.target) && !controlsToggle.contains(e.target)) {
+      if (!controlsPanel.contains(e.target) && !controlsToggle.contains(e.target) && controlsPanel.classList.contains('controls-visible')) {
         controlsPanel.classList.remove('controls-visible');
+        controlsToggle.style.display = 'flex';
       }
+    });
+
+    // --- NOVO SCRIPT PARA O SLIDER DINÂMICO ---
+    function updateSlider(slider) {
+      const min = parseFloat(slider.min);
+      const max = parseFloat(slider.max);
+      const value = parseFloat(slider.value);
+      const percentage = (value - min) / (max - min) * 100;
+      slider.style.setProperty('--progress', `${percentage}%`);
+    }
+
+    document.querySelectorAll('input[type="range"]').forEach(slider => {
+      updateSlider(slider);
+      slider.addEventListener('input', () => updateSlider(slider));
     });
   </script>
   <script type="module" src="main.js"></script>
